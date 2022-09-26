@@ -18,6 +18,7 @@ Parses an NMEA sentence, returning a corresponding type.
 function parse(line::AbstractString)
 
     message, checksum  = split(line, '*')
+    checksum = Base.parse(UInt8, checksum, base=16)
 
     if checksum!=xor(Vector{UInt8}(split(message,"\$")[2])...)
         @warn "Message checksum mismatch"
@@ -50,6 +51,8 @@ function parse(line::AbstractString)
         return parse_ZDA(items, system)
     elseif (occursin(r"PASHR$", items[1]))
         return parse_PASHR(items, system)
+    elseif (occursin(r"TXT$", items[1]))
+        return nothing
     end
 
     throw(ArgumentError("NMEA string not supported"))
@@ -60,31 +63,31 @@ end
 # type for GGA message - Global Positioning System Fix Data
 #----------
 mutable struct GGA
-    system # GPS, GLONASS, GALILEO, or Combined
-    time # in seconds
-    latitude # decimal degrees
-    longitude # decimal degrees
-    fix_quality
-    num_sats
-    HDOP
-    altitude # MSL in meters
-    geoidal_seperation # meters
-    age_of_differential # seconds since last SC104
-    diff_reference_id # differential reference station id
-    valid
+    system::String # GPS, GLONASS, GALILEO, or Combined
+    time::Union{Int, Nothing}
+    latitude::Union{Float64, Nothing} # decimal degrees
+    longitude::Union{Float64, Nothing} # decimal degrees
+    fix_quality::String
+    num_sats::Int
+    HDOP::Union{Float64, Nothing}
+    altitude::Union{Float64, Nothing} # MSL in meters
+    geoidal_seperation::Union{Float64, Nothing} # meters
+    age_of_differential::Union{Float64, Nothing} # seconds since last SC104
+    diff_reference_id::Union{Int, Nothing} # differential reference station id
+    valid::Bool
 
     function GGA(sys::AbstractString)
         system              = sys
-        time                = 0.0
-        latitude            = 0.0
-        longitude           = 0.0
+        time                = nothing
+        latitude            = nothing
+        longitude           = nothing
         fix_quality         = "UNKNOWN"
         num_sats            = 0
-        HDOP                = 0.0
-        altitude            = 0.0
-        geoidal_seperation  = 0.0
-        age_of_differential = 0.0
-        diff_reference_id   = 0
+        HDOP                = nothing
+        altitude            = nothing
+        geoidal_seperation  = nothing
+        age_of_differential = nothing
+        diff_reference_id   = nothing
         valid               = false
         new(system, time, latitude,
             longitude, fix_quality, num_sats,
@@ -99,23 +102,23 @@ end # type GGA
 # GSA message type - GNSS DOP and Active Satellites
 #----------
 mutable struct GSA
-    system
-    mode
-    current_mode
-    sat_ids
-    PDOP
-    HDOP
-    VDOP
-    valid
+    system::String
+    mode::Char
+    current_mode::Int
+    sat_ids::AbstractVector{Int}
+    PDOP::Union{Float64, Nothing}
+    HDOP::Union{Float64, Nothing}
+    VDOP::Union{Float64, Nothing}
+    valid::Bool
 
     function GSA(sys::AbstractString)
         system       = sys
         mode         = 'M'
         current_mode = 0
-        sat_ids      = []
-        PDOP         = 0.0
-        HDOP         = 0.0
-        VDOP         = 0.0
+        sat_ids      = Int[]
+        PDOP         = nothing
+        HDOP         = nothing
+        VDOP         = nothing
         valid        = false
         new(system, mode, current_mode,
             sat_ids, PDOP, HDOP,
@@ -127,23 +130,23 @@ end # type GSA
 # ZDA message type - Time and Date
 #----------
 mutable struct ZDA
-    system
-    time
-    day
-    month
-    year
-    zone_hrs
-    zone_mins
-    valid
+    system::String
+    time::Union{Int, Nothing}
+    day::Union{Int, Nothing}
+    month::Union{Int, Nothing}
+    year::Union{Int, Nothing}
+    zone_hrs::Union{Int, Nothing}
+    zone_mins::Union{Int, Nothing}
+    valid::Bool
 
     function ZDA(sys::AbstractString)
         system    = sys
-        time      = 0.0
-        day       = 0
-        month     = 0
-        year      = 0
-        zone_hrs  = 0
-        zone_mins = 0
+        time      = nothing
+        day       = nothing
+        month     = nothing
+        year      = nothing
+        zone_hrs  = nothing
+        zone_mins = nothing
         valid     = false
         new(system, time, day,
             month, year, zone_hrs,
@@ -156,27 +159,27 @@ end # type ZDA
 # GBS message type - RAIM GNSS Satellite Fault Detection
 #----------
 mutable struct GBS
-    system
-    time
-    lat_error
-    long_error
-    alt_error
-    failed_PRN
-    prob_of_missed
-    excluded_meas_err
-    standard_deviation
-    valid
+    system::String
+    time::Union{Int, Nothing}
+    lat_error::Union{Float64, Nothing}
+    long_error::Union{Float64, Nothing}
+    alt_error::Union{Float64, Nothing}
+    failed_PRN::Union{Int, Nothing}
+    prob_of_missed::Union{Float64, Nothing}
+    excluded_meas_err::Union{Float64, Nothing}
+    standard_deviation::Union{Float64, Nothing}
+    valid::Bool
 
     function GBS(sys::AbstractString)
         system             = sys
-        time               = 0.0
-        lat_error          = 0.0
-        long_error         = 0.0
-        alt_error          = 0.0
+        time               = nothing
+        lat_error          = nothing
+        long_error         = nothing
+        alt_error          = nothing
         failed_PRN         = 0
-        prob_of_missed     = 0.0
-        excluded_meas_err  = 0.0
-        standard_deviation = 0.0
+        prob_of_missed     = nothing
+        excluded_meas_err  = nothing
+        standard_deviation = nothing
         valid              = false
         new(system, time, lat_error,
             long_error, alt_error, failed_PRN,
@@ -190,19 +193,19 @@ end # type GBS
 # Latitude/Longitude
 #----------
 mutable struct GLL
-    system
-    latitude
-    longitude
-    time
-    status
-    mode
-    valid
+    system::String
+    latitude::Union{Float64, Nothing}
+    longitude::Union{Float64, Nothing}
+    time::Union{Int, Nothing}
+    status::Bool
+    mode::Char
+    valid::Bool
 
     function GLL(sys::AbstractString)
         system    = sys
-        latitude  = 0.0
-        longitude = 0.0
-        time      = 0.0
+        latitude  = nothing
+        longitude = nothing
+        time      = nothing
         status    = false
         mode      = 'N'
         valid     = false
@@ -216,16 +219,16 @@ end # type GLL
 # type to store SV data fields in GSV
 #----------
 mutable struct SVData
-    PRN
-    elevation
-    azimuth
-    SNR
+    PRN::Union{Int, Nothing}
+    elevation::Union{Int, Nothing}
+    azimuth::Union{Int, Nothing}
+    SNR::Union{Int, Nothing}
 
     function SVData()
-        PRN       = 0
-        elevation = 0
-        azimuth   = 0
-        SNR       = 0
+        PRN       = nothing
+        elevation = nothing
+        azimuth   = nothing
+        SNR       = nothing
         new(PRN, elevation, azimuth,
             SNR)
     end # constructor SVData
@@ -235,19 +238,19 @@ end # type SVData
 # type for GSV messages - GNSS Satellites In View
 #-----------
 mutable struct GSV
-    system
-    msg_total
-    msg_num
-    sat_total
-    SV_data
-    valid
+    system::String
+    msg_total::Int
+    msg_num::Int
+    sat_total::Int
+    SV_data::AbstractVector{SVData}
+    valid::Bool
 
     function GSV(sys::AbstractString)
         system    = sys
         msg_total = 0
         msg_num   = 0
         sat_total = 0
-        SV_data   = []
+        SV_data   = SVData[]
         valid     = false
         new(system, msg_total, msg_num,
             sat_total, SV_data, valid)
@@ -258,28 +261,28 @@ end # type GSV
 # RMC message type - Recommended Minimum Specific GNSS Data
 #----------
 mutable struct RMC
-    system
-    time
-    status
-    latitude
-    longitude
-    sog
-    cog
-    date
-    magvar
-    mode
-    valid
+    system::String
+    time::Union{Int, Nothing}
+    status::Bool
+    latitude::Union{Float64, Nothing}
+    longitude::Union{Float64, Nothing}
+    sog::Union{Float64, Nothing}
+    cog::Union{Float64, Nothing}
+    date::String
+    magvar::Union{Float64, Nothing}
+    mode::Char
+    valid::Bool
 
     function RMC(sys::AbstractString)
         system    = sys
-        time      = 0.0
+        time      = nothing
         status    = false
-        latitude  = 0.0
-        longitude = 0.0
-        sog       = 0.0
-        cog       = 0.0
+        latitude  = nothing
+        longitude = nothing
+        sog       = nothing
+        cog       = nothing
         date      = ""
-        magvar    = 0.0
+        magvar    = nothing
         mode      = 'N'
         valid     = false
         new(system, time, status,
@@ -293,18 +296,18 @@ end # type RMC
 # VTG message type - Course over Ground & Ground Speed
 #----------
 mutable struct VTG
-    CoG_true
-    CoG_mag
-    SoG_knots
-    SoG_kmhr
-    mode
-    valid
+    CoG_true::Union{Float64, Nothing}
+    CoG_mag::Union{Float64, Nothing}
+    SoG_knots::Union{Float64, Nothing}
+    SoG_kmhr::Union{Float64, Nothing}
+    mode::Char
+    valid::Bool
 
     function VTG(sys::AbstractString)
-        CoG_true  = 0.0
-        CoG_mag   = 0.0
-        SoG_knots = 0.0
-        SoG_kmhr  = 0.0
+        CoG_true  = nothing
+        CoG_mag   = nothing
+        SoG_knots = nothing
+        SoG_kmhr  = nothing
         mode      = 'N'
         valid     = false
         new(CoG_true, CoG_mag, SoG_knots,
@@ -317,22 +320,22 @@ end # type VTG
 # DTM message type - Datum
 #----------
 mutable struct DTM
-    system
-    local_datum_code
-    local_datum_subcode
-    lat_offset
-    long_offset
-    alt_offset
-    ref_datum
-    valid
+    system::String
+    local_datum_code::String
+    local_datum_subcode::String
+    lat_offset::Union{Float64, Nothing}
+    long_offset::Union{Float64, Nothing}
+    alt_offset::Union{Float64, Nothing}
+    ref_datum::String
+    valid::Bool
 
     function DTM(sys::AbstractString)
         system              = sys
         local_datum_code    = ""
         local_datum_subcode = ""
-        lat_offset          = 0.0
-        long_offset         = 0.0
-        alt_offset          = 0.0
+        lat_offset          = nothing
+        long_offset         = nothing
+        alt_offset          = nothing
         ref_datum           = ""
         valid               = false
 
@@ -344,31 +347,31 @@ end # type DTM
 
 
 mutable struct PASHR
-    system
-    time
-    heading
-    heading_type
-    roll
-    pitch
-    heave
-    roll_accuracy
-    pitch_accuracy
-    heading_accuracy
-    aiding_code
-    ins_code
-    valid
+    system::String
+    time::Union{Int, Nothing}
+    heading::Union{Float64, Nothing}
+    heading_type::String
+    roll::Union{Float64, Nothing}
+    pitch::Union{Float64, Nothing}
+    heave::Union{Float64, Nothing}
+    roll_accuracy::Union{Float64, Nothing}
+    pitch_accuracy::Union{Float64, Nothing}
+    heading_accuracy::Union{Float64, Nothing}
+    aiding_code::Int
+    ins_code::Int
+    valid::Bool
 
     function PASHR(sys::AbstractString)
         system  = sys
-        time = 0.0
-        heading = 0.0
+        time = nothing
+        heading = nothing
         heading_type = "T"
-        roll = 0.0
-        pitch = 0.0
-        heave = 0.0
-        roll_accuracy = 0.0
-        pitch_accuracy = 0.0
-        heading_accuracy = 0.0
+        roll = nothing
+        pitch = nothing
+        heave = nothing
+        roll_accuracy = nothing
+        pitch_accuracy = nothing
+        heading_accuracy = nothing
         aiding_code = 0
         ins_code = 0
         valid    = false
@@ -660,7 +663,10 @@ function parse_RMC(items::Array{T}, system::AbstractString) where T <: SubString
     RMC_data.longitude = _dms_to_dd(items[6], items[7])
     RMC_data.sog       = tryparse(Float64, items[8])
     RMC_data.cog       = tryparse(Float64, items[9])
-    RMC_data.date      = string(items[10][3:4], '/', items[10][1:2], '/', items[10][5:6])
+
+    if length(items[10]) == 6
+        RMC_data.date      = string(items[10][3:4], '/', items[10][1:2], '/', items[10][5:6])
+    end
 
     if (items[12] == "W" || items[12] == "S")
         RMC_data.magvar = tryparse(Float64, items[11]) * -1
@@ -743,6 +749,10 @@ end
 # convert degrees minutes seconds to decimal degrees
 #----------
 function _dms_to_dd(dms::SubString, hemi::SubString)
+    if length(dms) == 0
+        return nothing
+    end
+
     if (dms[1:1] == "0")
         dms = dms[2:end]
     end
@@ -756,17 +766,22 @@ function _dms_to_dd(dms::SubString, hemi::SubString)
         dec_degrees *= -1
     end
 
-    dec_degrees
+    return dec_degrees
 end # function _dms_to_dd
 
 #----------
 # hhmmss.s-s to time of day in seconds
 #----------
 function _hms_to_secs(hms::SubString)
+    if length(hms) == 0
+        return nothing
+    end
+
     hours   = Base.parse(Float64, hms[1:2])
     minutes = Base.parse(Float64, hms[3:4])
     seconds = Base.parse(Float64, hms[5:end])
-    (hours * 3600) + (minutes * 60) + seconds
+
+    return (hours * 3600) + (minutes * 60) + seconds
 end # function _hms_to_secs
 
 end # module NMEA
